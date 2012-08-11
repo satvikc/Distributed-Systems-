@@ -13,18 +13,16 @@ client = do
   done <- newEmptyMVar
   let spawnWorker io = forkIO (io `finally` tryPutMVar done ())
   recv_tid <- spawnWorker $ forever $ do
-              e <- hIsEOF hndl
-              if e
-                then return ()
-                else do
-                     msg <- hGetLine hndl
-                     putStrLn msg
+    e <- hIsEOF hndl
+    unless e $ do msg <- hGetLine hndl
+                  putStrLn msg
   send_tid <- spawnWorker $ forever $ do
     w <- getLine
+    when (w=="quit") (tryPutMVar done () >> return ())
     hPutStrLn hndl w
+    hFlush hndl
   takeMVar done
-  print "here"
-  mapM_ killThread [recv_tid, send_tid]
+  mapM_ killThread [recv_tid, send_tid] `finally` hClose hndl
 
 main :: IO ()
 main = client
