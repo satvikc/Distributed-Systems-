@@ -8,51 +8,51 @@ import System.IO
 import Text.ParserCombinators.Parsec
 
 
-data Expr a = Number a
-            | Add (Expr a) (Expr a)
-            | Mul (Expr a) (Expr a)
-            | Sub (Expr a) (Expr a)
-            | Div (Expr a) (Expr a)
-            | Negate (Expr a)
-            deriving (Show, Eq)
+data expr a = number a
+            | add (expr a) (expr a)
+            | mul (expr a) (expr a)
+            | sub (expr a) (expr a)
+            | div (expr a) (expr a)
+            | negate (expr a)
+            deriving (show, eq)
 
-data AddOp = Plus | Minus
-data MulOp = Times | Over
+data addop = plus | minus
+data mulop = times | over
 
-evaluate :: (Fractional a, Monad m , Eq a, Show a) => Expr a -> m a
-evaluate (Negate x) = liftM negate (evaluate x)
-evaluate (Div x y)  = do x' <- (evaluate x)
+evaluate :: (fractional a, monad m , eq a, show a) => expr a -> m a
+evaluate (negate x) = liftm negate (evaluate x)
+evaluate (div x y)  = do x' <- (evaluate x)
                          y' <- (evaluate y)
-                         if y' == 0 then fail "Division by zero"
+                         if y' == 0 then fail "division by zero"
                                     else return $ x' / y'
-evaluate (Sub x y)  = liftM2 (-) (evaluate x) (evaluate y)
-evaluate (Mul x y)  = liftM2 (*) (evaluate x) (evaluate y)
-evaluate (Add x y)  = liftM2 (+) (evaluate x) (evaluate y)
-evaluate (Number x) = return x
+evaluate (sub x y)  = liftm2 (-) (evaluate x) (evaluate y)
+evaluate (mul x y)  = liftm2 (*) (evaluate x) (evaluate y)
+evaluate (add x y)  = liftm2 (+) (evaluate x) (evaluate y)
+evaluate (number x) = return x
 
 
 
-pDigit = oneOf ['0'..'9']
-pSign = option '+' $ oneOf "-+"
-pDigits = many1 pDigit
-pDecimalPoint = char '.'
-pFracPart = option "0" (pDecimalPoint >> pDigits)
+pdigit = oneof ['0'..'9']
+psign = option '+' $ oneof "-+"
+pdigits = many1 pdigit
+pdecimalpoint = char '.'
+pfracpart = option "0" (pdecimalpoint >> pdigits)
 
-number = do sign <- pSign
-            integerPart <- pDigits
-            fracPart <- pFracPart
-            expPart <- pExp
-            let i = read integerPart
-            let f = read fracPart
-            let e = expPart
-            let value = (i + (f / 10^(length fracPart))) * 10 ^^ e
-            return $ Number $ case sign of
+number = do sign <- psign
+            integerpart <- pdigits
+            fracpart <- pfracpart
+            exppart <- pexp
+            let i = read integerpart
+            let f = read fracpart
+            let e = exppart
+            let value = (i + (f / 10^(length fracpart))) * 10 ^^ e
+            return $ number $ case sign of
                  '+' -> value
                  '-' -> negate value
-         where pExp = option 0 $ do
-                             oneOf "eE"
-                             sign <- pSign
-                             num <- pDigits
+         where pexp = option 0 $ do
+                             oneof "ee"
+                             sign <- psign
+                             num <- pdigits
                              let n = read num
                              return $ if sign == '-' then negate n else n
 
@@ -76,6 +76,7 @@ expr = do
           return $ foldl buildExpr first ops
        where buildExpr acc (Plus, x) = Add acc x
              buildExpr acc (Minus, x) = Sub acc x
+
 
 addOp = do operator <- oneOf "+-"
            whitespace
@@ -105,6 +106,7 @@ mulOp = do operator <- oneOf "*/"
                          '*' -> (Times, t)
                          '/' -> (Over, t)
 
+
 mulOps = many mulOp
 calculation = do whitespace
                  e <- expr
@@ -117,5 +119,3 @@ eval s = case (parse calculation "" s) of
                                    Right v -> show v
                                    Left err -> "Error"
                    Left err -> "Parse Error"
-
-

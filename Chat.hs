@@ -363,3 +363,4 @@ parseServerCommand s = case parse pServerCommand "" s of
 
 main :: IO ()
 main = runServer
+

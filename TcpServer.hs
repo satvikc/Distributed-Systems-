@@ -10,7 +10,7 @@ import           System.IO             (BufferMode (LineBuffering), Handle,
                                         hClose, hIsEOF, hSetBuffering)
 import           Test.HUnit
 import           Test.QuickCheck
- 
+
 -- | Port number on which to run our server
 port :: PortNumber
 port = 4000
@@ -80,6 +80,8 @@ runTests :: IO ()
 runTests = do
   runTestTT tests
   quickCheck prop_empty
+
+
 
 -- | For now, main will run our tests.
 main :: IO ()
