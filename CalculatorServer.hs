@@ -1,4 +1,4 @@
-module TcpServer where
+module Main where
 
 import           Calculator
 import           Control.Concurrent

@@ -1,19 +1,23 @@
 all : chat client calculator tcp
-chat: Chat.hs 
-	ghc --make -O2 -threaded Chat.hs
-client: Client.hs
-	ghc --make -O2 -threaded Client.hs
-calculator: Calculator.hs
+
+chat: ChatServer.hs ChatClient.hs 
+	ghc --make -O2 -threaded ChatServer.hs
+	ghc --make -o2 -threaded ChatClient.hs
+nplayer: NPlayerServer.hs NPlayerClient.hs
+	ghc --make -O2 -threaded NPlayerServer.hs
+	ghc --make -O2 -threaded NPlayerClient.hs
+calculator: Calculator.hs CalculatorServer.hs CalculatorClient.hs
 	ghc --make -O2 Calculator.hs
-tcp: calculator TcpServer.hs
-	ghc --make -O2 TcpServer.hs
+	ghc --make -O2 -threaded CalculatorServer.hs
+	ghc --make -O2 -threaded CalculatorClient.hs
 clean:
 	rm -f *.hi 
 	rm -f *.o
-	rm -f Chat 
-	rm -f Client 
-	rm -f TcpServer
+	rm -f ChatServer
+	rm -f ChatClient
+	rm -f NPLayerServer 
+	rm -f CalculatorServer
 	rm -f NPlayerClient
-	rm -f NPlayer
+	rm -f CalculatorClient
 
 
