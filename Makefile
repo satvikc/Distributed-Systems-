@@ -20,5 +20,6 @@ clean:
 	rm -f CalculatorServer
 	rm -f NPlayerClient
 	rm -f CalculatorClient
+	rm -rf ./dist/
 
 
