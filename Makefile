@@ -13,5 +13,7 @@ clean:
 	rm -f Chat 
 	rm -f Client 
 	rm -f TcpServer
+	rm -f NPlayerClient
+	rm -f NPlayer
 
 
