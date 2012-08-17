@@ -1,8 +1,8 @@
-all : chat client calculator tcp
+all : chat nplayer calculator
 
 chat: ChatServer.hs ChatClient.hs 
 	ghc --make -O2 -threaded ChatServer.hs
-	ghc --make -o2 -threaded ChatClient.hs
+	ghc --make -O2 -threaded ChatClient.hs
 nplayer: NPlayerServer.hs NPlayerClient.hs
 	ghc --make -O2 -threaded NPlayerServer.hs
 	ghc --make -O2 -threaded NPlayerClient.hs
