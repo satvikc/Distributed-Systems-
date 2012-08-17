@@ -3,7 +3,6 @@ module Main where
 
 import           Control.Applicative          ((<$>), (<*>))
 import           Control.Concurrent
-import           Control.Concurrent.STM
 import           Control.Exception            (bracket_, finally)
 import           Control.Monad
 import qualified Data.Foldable                as F
@@ -13,6 +12,9 @@ import           Data.Random
 import           Data.Random.Source.DevRandom
 import           Network
 import           System.IO
+import Data.IORef
+import System.Random
+import System.Environment (getArgs)
 
 
 -- | Port number on which to run our server
@@ -42,23 +44,20 @@ data Message = ServerMessage String
 -- * By Id
 -- * By Name
 data Server  = Server
-               { serverClients :: TVar (Map ClientId Client)
-               , serverGames :: TVar [(Client,Client)]
+               { serverClients :: IORef (Map ClientId Client)
                , serverDummy :: Client
-               , serverInitiateGo :: MVar ()   -- ^ To syncronize on games
-               , serverInitiateDone :: MVar () -- ^ To synchronize on games
                }
+
 
 -- | Initializes the Server
 serverInit :: IO Server
-serverInit = Server <$> newTVarIO M.empty <*> newTVarIO [] <*> dummy <*> newMVar () <*> newMVar ()
+serverInit = Server <$> newIORef M.empty <*> dummy
 
 -- | Client
 data Client = Client
               { clientId :: ClientId                  -- ^ Client Id
               , clientHandle :: Handle                -- ^ Connected Handle
-              , clientSendChan :: TChan Message       -- ^ Channel on which to send message
-              , clientOpponent :: TVar (Maybe Client) -- ^ Chatting Client
+              , clientOpponent :: IORef (Maybe Client) -- ^ Opponent
               }
 
 -- Dummy Client which prints everything to stdout.
@@ -68,126 +67,84 @@ dummy = clientInit 0 stdout
 instance Show Client where
   show Client{..} = "<Id: " ++ show clientId ++ ">"
 
-printOpponent :: Client -> IO ()
-printOpponent Client{..} = print =<< (atomically $ readTVar clientOpponent)
 
 instance Eq Client where
   a == b = clientId a == clientId b
 
 -- | Initializes Client
 clientInit :: ClientId -> Handle -> IO Client
-clientInit cid h =
-  Client cid h <$> newTChanIO <*> newTVarIO Nothing
-
--- | Send Message to the Client
-sendMessage :: Client -> Message -> STM ()
-sendMessage Client{..} = writeTChan clientSendChan
-
--- | Send Chat Message to the Opponent of the Client
-sendOpponent :: Client -> Message -> STM ()
-sendOpponent Client{..} msg = maybe (return ()) (`sendMessage` msg) =<< readTVar clientOpponent
-
+clientInit cid h = Client cid h <$> newIORef Nothing
 
 -- | Send Message To all the connected Clients
-broadcast :: Server -> Message -> STM ()
-
+broadcast :: Server -> Message -> IO ()
 broadcast Server{..} msg =
-  readTVar serverClients >>= F.mapM_ (`sendMessage` msg)
-
-
--- | Disconnects Clients from each other
-disconnectClient :: Client -> Client -> STM ()
-disconnectClient client1 client2 = do
-  writeTVar (clientOpponent client1) Nothing
-  writeTVar (clientOpponent client2) Nothing
-
-
--- | Disconnects Client from its partner
-disconnect :: Client -> STM ()
-disconnect client@Client{..} = do
-  chatting <- readTVar clientOpponent
-  case chatting of
-    Nothing -> sendMessage client $ ServerMessage "Not opponent."
-    Just c -> disconnectClient client c
-
-
-connectClients :: Client -> Client -> STM ()
-connectClients client1 client2 = do
-  writeTVar (clientOpponent client1) (Just client2)
-  writeTVar (clientOpponent client2) (Just client1)
-  sendMessage client1 $ ServerMessage $ "Your Opponent is ClientId " ++ show (clientId client2)
-  sendMessage client2 $ ServerMessage $ "Your Opponent is ClientId " ++ show (clientId client1)
+  readIORef serverClients >>= F.mapM_ (`sendMessage` msg)
 
 -- | Add Client to the list of Connected Clients
-insertClient :: Server -> Client -> STM ()
-insertClient Server{..} client@Client{..} = modifyTVar' serverClients (M.insert clientId client)
+insertClient :: Server -> Client -> IO ()
+insertClient Server{..} client@Client{..} = atomicModifyIORef serverClients (\s -> (M.insert clientId client s,()) )
 
 -- | Delete Client from the list of Connected Clients
-deleteClient :: Server -> Client -> STM ()
-deleteClient Server{..} Client{..} = modifyTVar' serverClients $ M.delete clientId
+deleteClient :: Server -> Client -> IO ()
+deleteClient Server{..} Client{..} = atomicModifyIORef serverClients (\s -> (M.delete clientId s,()))
 
 -- | Kicks Client Out
+kickClient :: Server -> Client -> String -> IO ()
+kickClient server c@Client{..} msg = do
+  sendMessage c $ ServerMessage msg
+  deleteClient server c
+  hClose clientHandle
 
-kickClient :: Client -> IO ()
-kickClient Client{..} = hClose clientHandle
+lostClient :: Server -> Client -> IO ()
+lostClient s c = kickClient s c "You Lost the Game "
 
--- | Server Loop to serve the client requests
-serveLoop :: Server -> Client -> IO ()
-serveLoop Server{..}
-          client@Client{..} = do
-    done <- newEmptyMVar
-    let spawnWorker io = forkIO (io `finally` tryPutMVar done ())
-
-    recv_tid <- spawnWorker $ forever $ do
-
-                  msg <- hGetLine clientHandle
-                  print msg
-                  case reads msg of
-                      [(x,"")] -> atomically $ sendOpponent client $ OpponentsNumber x
-                      _ -> do
-                        atomically $ sendMessage client $ ServerMessage "Wrong Format of Number. You will be knocked out."
-                        kickClient client
-
-
-
-    send_tid <- spawnWorker $
-                let loop = join $ atomically $ do
-                           msg <- readTChan clientSendChan
-                           return $ do
-                             handleMessage client msg
-                             loop
-                    in loop
-
-    cleaner <- spawnWorker $
-               let loop = do
-                     st <- hIsEOF clientHandle
-                     print st
-                     when st loop
-                   in loop
-    takeMVar done
-    mapM_ killThread [recv_tid, send_tid, cleaner]
 
 -- | Handle the Chat Message. This function actually is used to send message from channel to actual handle
-handleMessage :: Client -> Message -> IO ()
-handleMessage Client{..} message = hPutStrLn clientHandle $
+sendMessage :: Client -> Message -> IO ()
+sendMessage Client{..} message = hPutStrLn clientHandle $
         case message of
             ServerMessage msg           -> "* " ++ msg
             InitiateGame -> "#"
             OpponentsNumber number  -> show number
+
+sendOpponent :: Client -> Message -> IO ()
+sendOpponent Client{..} msg = do
+  opponent <- readIORef clientOpponent
+  case opponent of
+    Nothing -> return ()
+    Just c -> sendMessage c msg
+
+
+connectClients :: Client -> Client -> IO ()
+connectClients client1 client2 = do
+   writeIORef (clientOpponent client1) (Just client2)
+   writeIORef (clientOpponent client2) (Just client1)
+   sendMessage client1 $ ServerMessage $ "Your Opponent is ClientId " ++ show (clientId client2)
+   sendMessage client2 $ ServerMessage $ "Your Opponent is ClientId " ++ show (clientId client1)
+
+-- | Disconnects Clients from each other
+disconnectClient :: Client -> Client -> IO ()
+disconnectClient client1 client2 = do
+   writeIORef (clientOpponent client1) Nothing
+   writeIORef (clientOpponent client2) Nothing
+
+ -- | Disconnects Client from its partner
+disconnect :: Client -> IO ()
+disconnect client@Client{..} = do
+   chatting <- readIORef clientOpponent
+   case chatting of
+     Nothing -> sendMessage client $ ServerMessage "Not opponent."
+     Just c -> disconnectClient client c
 
 -- | Server to handle the given client
 serve :: Server -> ClientId -> Handle -> IO ()
 serve server@Server{..} cid handle = do
     hSetNewlineMode handle universalNewlineMode
         -- Swallow carriage returns sent by telnet clients
-    hSetBuffering handle NoBuffering
+    hSetBuffering handle LineBuffering
     client <- clientInit cid handle
-    atomically $ sendMessage client $ ServerMessage $ "Your Id is " ++ show cid
-    bracket_ (atomically $ insertClient server client)
-      (atomically $ do
-        disconnect client
-        deleteClient server client)
-      (serveLoop server client)
+    sendMessage client $ ServerMessage $ "Your Id is " ++ show cid
+    insertClient server client
 
 -- | Starts the server
 runServer :: Int -> IO ()
@@ -198,52 +155,76 @@ runServer n = do
     let serv cid =  do
         (handle, host , p) <- accept sock
         putStrLn $ "Accepted connection from " ++ host ++ ":" ++ show p
-        forkIO (serve server cid handle `finally` hClose handle)
+        forkIO (serve server cid handle)
         if cid < n
           then serv (cid+1)
-          else let play = do
-                     print "Clearing Clients"
-                     atomically $ clearGames server
-                     print "Creating Games"
-                     list <- createGames server
+          else do
+            print "waitloop in server"
+            waitLoop n server
+            print "wait loop ended"
+            let play = do
+                     list <- M.elems <$> (readIORef $ serverClients server)
                      print "Game  Started"
-                     mapM_ printOpponent . M.elems =<< (atomically $ readTVar (serverClients
-                                                                     server))
-
                      case list of
                        [c] -> do
-                         atomically $ sendMessage c $ ServerMessage "You Won then game"
                          putStrLn $ show c ++ " Won the Game."
+                         kickClient server c "You Won the Game"
                        [] -> putStrLn "No body won."
-                       _ -> waitLoop (length list) server >> play
+                       _ -> do
+                         games <- createGames server list
+                         print games
+                         mapM_ (checkGuesses server) games
+                         print "Guesses Checked"
+                         mapM_ (clearClients server) list 
+                         print "Losers Kicked"
+                         play
                in play
     serv 1 >> return () `finally` sClose sock
  where
+   printOpponent :: Client -> IO ()
+   printOpponent c@Client{..} = do
+     opponent <- readIORef clientOpponent
+     putStrLn $ show c ++ " <--> " ++ show opponent
+
    waitLoop t server = do
-     clients <- atomically $ readTVar (serverClients server)
-     if (M.size clients) < t
-       then return ()
-       else yield >> waitLoop t server
+     clients <- readIORef (serverClients server)
+     if ((M.size clients) < t)
+       then  (yield >> waitLoop t server)
+       else  (print $ M.size clients)
+   checkGuesses :: Server -> (Client,Client) -> IO ()
+   checkGuesses server (c1,c2) = do
+     c1guess <- read <$> hGetLine (clientHandle c1)
+     putStrLn $ show c1 ++ " guesses " ++ show c1guess
+     if c2 == (serverDummy server)
+       then do dguess <- randomIO :: IO Int
+               sendMessage c1 $ OpponentsNumber dguess
+               putStrLn $ "Dummy guesses " ++ show dguess
+       else do c2guess <- read <$> hGetLine (clientHandle c2)
+               sendMessage c1 $ OpponentsNumber c2guess
+               sendMessage c2 $ OpponentsNumber c1guess
+               putStrLn $ show c2 ++ " guesses " ++ show c2guess
 
-clearGames :: Server -> STM ()
+   clearClients :: Server -> Client -> IO ()
+   clearClients server c = do
+     c1reply <- hGetLine (clientHandle c)
+     when (c1reply == "n") $ lostClient server c
+
+clearGames :: Server -> IO ()
 clearGames Server{..} =
-  F.mapM_ (\client -> writeTVar (clientOpponent client) Nothing) =<< readTVar serverClients
+  F.mapM_ disconnect =<< readIORef serverClients
 
-createGames :: Server -> IO [Client]
-createGames server@Server{..} = do
-  clients <-  M.elems <$> readTVarIO serverClients
+createGames :: Server -> [Client] -> IO [(Client,Client)]
+createGames server@Server{..} clients = do
   shuffled <- runRVar (shuffle clients) DevRandom
   let games = gamify shuffled serverDummy
-  atomically $ (initiateGames games >> (broadcast server $ ServerMessage "Round Started"))
-  dummyRandom <- runRVar (uniform 1 100) DevRandom
-  atomically $ sendOpponent serverDummy (OpponentsNumber dummyRandom)
-  return clients
+  initiateGames games
+  return games
  where
    gamify :: [Client] -> Client -> [(Client,Client)]
    gamify [] _ = []
    gamify [x] d = [(x,d)]
    gamify (x:y:xs) d = (x,y):gamify xs d
-   initiateGames :: [(Client,Client)] -> STM ()
+   initiateGames :: [(Client,Client)] -> IO ()
    initiateGames [] = return ()
    initiateGames ((c,o):xs) = do
      connectClients c o
@@ -256,10 +237,7 @@ createGames server@Server{..} = do
 
 main :: IO ()
 
-main = runServer 3
-
-
-
-
-
-
+main = do
+  x:_ <- getArgs
+  print x
+  runServer (read x)
