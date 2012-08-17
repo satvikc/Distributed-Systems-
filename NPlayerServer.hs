@@ -6,15 +6,15 @@ import           Control.Concurrent
 import           Control.Exception            (bracket_, finally)
 import           Control.Monad
 import qualified Data.Foldable                as F
+import           Data.IORef
 import           Data.Map                     (Map)
 import qualified Data.Map                     as M
 import           Data.Random
 import           Data.Random.Source.DevRandom
 import           Network
+import           System.Environment           (getArgs)
 import           System.IO
-import Data.IORef
-import System.Random
-import System.Environment (getArgs)
+import           System.Random
 
 
 -- | Port number on which to run our server
@@ -175,7 +175,7 @@ runServer n = do
                          print games
                          mapM_ (checkGuesses server) games
                          print "Guesses Checked"
-                         mapM_ (clearClients server) list 
+                         mapM_ (clearClients server) list
                          print "Losers Kicked"
                          play
                in play
@@ -238,6 +238,9 @@ createGames server@Server{..} clients = do
 main :: IO ()
 
 main = do
-  x:_ <- getArgs
-  print x
-  runServer (read x)
+  x <- getArgs
+  if x == [] then
+    print "You are required to give number of clients which play the game"
+    else do let (y:_) = x
+            print y
+            runServer (read y)

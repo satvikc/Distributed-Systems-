@@ -63,26 +63,5 @@ repeatUntil action = do
 calcServer :: IO ()
 calcServer = runServer (\a -> return . C8.pack . eval $ C8.unpack a)
 
-
-
-
--- Tests
-
-tests :: Test
-tests = TestList $ map TestCase
-  [assertEqual "add tests here"  1 (1::Int)
-  ]
-
-prop_empty :: Int -> Bool
-prop_empty c1 = (c1::Int) == c1
-
-runTests :: IO ()
-runTests = do
-  runTestTT tests
-  quickCheck prop_empty
-
-
-
--- | For now, main will run our tests.
 main :: IO ()
-main = client
+main = calcServer

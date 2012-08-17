@@ -8,27 +8,27 @@ import           System.Random
 port :: PortNumber
 port = 4000
 
-client :: io ()
+client :: IO ()
 client = do
-  hndl <- connectto "172.24.1.166" (portnumber port)
-  hsetbuffering hndl linebuffering
+  hndl <- connectTo "172.24.1.166" (PortNumber port)
+  hSetBuffering hndl LineBuffering
   let listener = do
-                 e <- hiseof hndl
+                 e <- hIsEOF hndl
                  unless e $ do
-                   msg <- hgetline hndl
+                   msg <- hGetLine hndl
                    case msg of
                      "#" ->  do
-                         rnd <- randomio :: io int
-                         hputstrln hndl $ show rnd
-                         opponent <- read <$> hgetline hndl
-                         putstrln $ "you:" ++ show rnd ++ "\nopponent: " ++ show opponent
+                         rnd <- randomIO :: IO Int
+                         hPutStrLn hndl $ show rnd
+                         opponent <- read <$> hGetLine hndl
+                         putStrLn $ "you:" ++ show rnd ++ "\nopponent: " ++ show opponent
                          if (opponent > rnd)
-                           then hputstrln hndl "n"
-                           else hputstrln hndl "y"
+                           then hPutStrLn hndl "n"
+                           else hPutStrLn hndl "y"
                          listener
-                     "q" -> hflush hndl >> hclose hndl >> print "handle closed"
-                     _ -> putstrln msg >> listener
+                     "q" -> hFlush hndl >> hClose hndl >> print "handle closed"
+                     _ -> putStrLn msg >> listener
   listener
 
-main :: io ()
+main :: IO ()
 main = client

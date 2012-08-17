@@ -7,6 +7,7 @@ import           Control.Concurrent.STM
 import           Control.Exception             (bracket_, finally)
 import           Control.Monad                 (filterM, forever, join)
 import qualified Data.Foldable                 as F
+import           Data.List
 import           Data.Map                      (Map)
 import qualified Data.Map                      as M
 import           Data.Maybe                    (isNothing)
@@ -96,6 +97,10 @@ sendWaiting Client{..} msg = do
   waiting <- readTVar clientsWaiting
   mapM_ (\c -> if Just c /= chatting then sendMessage c msg else return ()) waiting
 
+-- | Deletes c2 from waiting list of c1
+deleteWaiting :: Client -> Client -> STM ()
+deleteWaiting c1 c2  = modifyTVar' (clientsWaiting c1) $ delete c2
+
 -- | Disconnects Clients from each other
 disconnectClient :: Client -> Client -> STM ()
 disconnectClient client1 client2 = do
@@ -112,17 +117,17 @@ disconnect client@Client{..} = do
     Nothing -> sendMessage client $ ServerMessage "Not connected to any client."
     Just c -> disconnectClient client c
 
--- | List of Clients Available to Chat
-available :: Map a Client -> STM ([(a,ClientId)])
-available m = map (\(a,b) -> (a,clientId b)) <$> filterM emptyChat (M.toList m)
+-- | List of Clients Available to Chat minus client who has requested.
+available :: Client -> Map a Client -> STM ([(a,ClientId)])
+available c m = map (\(a,b) -> (a,clientId b)) <$> filterM emptyChat (M.toList m)
   where
     emptyChat (_,client) = do
       w <- readTVar $ clientChatting client
-      return $ isNothing w
+      return $ (isNothing w && c/=client)
 
 -- | Number of Available Clients
-clientsNumber :: Map a Client -> STM Int
-clientsNumber m = length <$> available m
+clientsNumber :: Client -> Map a Client -> STM Int
+clientsNumber c m = length <$> available c m
 
 -- | Send Chat Request to Client.
 -- From client1 to client2
@@ -155,16 +160,22 @@ acceptClient client1 client2 = do
   if req == Just client1
     then do connectClients client1 client2
             sendWaiting client1 $ ServerMessage $  (show client1) ++ " not available for chat."
-    else sendMessage client1 $ ServerMessage "Other client is either not available or has not requested to chat with you"
+            sendWaiting client2 $ ServerMessage $  (show client2) ++ " not available for chat."
+            writeTVar (clientsWaiting client1) []
+            writeTVar (clientsWaiting client2) []
+    else do
+            sendMessage client1 $ ServerMessage "Other client is either not available or has not requested to chat with you"
+            deleteWaiting client1 client2
+
 
 -- | Serve the server command with appropriate response
 serveCommand :: Server -> Client -> ServerCommand -> STM ()
 serveCommand Server{..} client@Client{..} sc = case sc of
   Available -> sendMessage client =<<
-               ServerMessage . prettify <$> (available =<< readTVar serverClientsByName)
+               ServerMessage . prettify <$> (available client =<< readTVar serverClientsByName)
 
   ClientsNumber -> sendMessage client =<<
-                   ServerMessage . show <$> (clientsNumber =<< readTVar serverClients)
+                   ServerMessage . show <$> (clientsNumber client =<< readTVar serverClients)
 
   Request n -> do
     chatting <- readTVar clientChatting
@@ -363,4 +374,3 @@ parseServerCommand s = case parse pServerCommand "" s of
 
 main :: IO ()
 main = runServer
-

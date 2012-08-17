@@ -13,9 +13,10 @@ calculator: Calculator.hs CalculatorServer.hs CalculatorClient.hs
 clean:
 	rm -f *.hi 
 	rm -f *.o
+	rm -f *_flymake.hs
 	rm -f ChatServer
 	rm -f ChatClient
-	rm -f NPLayerServer 
+	rm -f NPlayerServer 
 	rm -f CalculatorServer
 	rm -f NPlayerClient
 	rm -f CalculatorClient
