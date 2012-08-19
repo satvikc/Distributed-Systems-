@@ -23,7 +23,7 @@ evaluate :: (Fractional a, Monad m , Eq a, Show a) => Expr a -> m a
 evaluate (Negate x) = liftM negate (evaluate x)
 evaluate (Div x y)  = do x' <- (evaluate x)
                          y' <- (evaluate y)
-                         if y' == 0 then fail "Division by zero"
+                         if y' == 0 then return 0
                                     else return $ x' / y'
 evaluate (Sub x y)  = liftM2 (-) (evaluate x) (evaluate y)
 evaluate (Mul x y)  = liftM2 (*) (evaluate x) (evaluate y)

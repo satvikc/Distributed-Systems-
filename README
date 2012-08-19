@@ -1,0 +1,36 @@
+* The Assignments are done in haskell programming language.
+
+* How to Compile
+    * To run the assignments you need to have ghc >= 7.4 ,and cabal installed.
+    * Run 'cabal install' when in the assignment directory. It will install the necessary dependencies.
+    * 'cabal configure' 
+    * 'cabal build'
+    * It will create a dist/build directory with all the executable files.
+
+* How to run 
+
+* NPlayer Game (for 20 players)
+    * ./dist/build/NPlayerServer/NPlayerServer 20 
+    * ./clients.sh 20
+
+* Calculator (to quit client type quit) 
+    * ./dist/build/CalculatorServer/CalculatorServer 
+    * ./dist/build/CalculatorClient/CalculatorClient
+    * Note: On division by 0 it returns 0.
+
+* Chat (for server to run on 4 cores use -N4) 
+    * ./dist/build/ChatServer/ChatServer +RTS -N4 
+    * ./dist/build/ChatClient/ChatClient 
+    * Commands available:
+        * s:available : Available clients for chatting.
+        * s:number : Number of available clients. 
+        * s:connectedTo : The client to which this client is chatting 
+        * s:request id : Send a request to chat to Client denoted by id. 
+        * s:accept id : To accept a chat request of Client denoted by id. 
+        * s:disconnect : To disconnect from the current chat. 
+        * quit : To exit the chat window
+    * Since above strings are command keywords so you can not send then to other in a chat. 
+
+
+
+

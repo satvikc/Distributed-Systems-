@@ -38,6 +38,7 @@ type Number = Int
 data Message = ServerMessage String
                | InitiateGame
                | OpponentsNumber Number
+               | QuitClient 
   deriving Show
 
 -- | Server has a list of conencted Clients.
@@ -92,6 +93,7 @@ deleteClient Server{..} Client{..} = atomicModifyIORef serverClients (\s -> (M.d
 kickClient :: Server -> Client -> String -> IO ()
 kickClient server c@Client{..} msg = do
   sendMessage c $ ServerMessage msg
+  sendMessage c $ QuitClient 
   deleteClient server c
   hClose clientHandle
 
@@ -105,6 +107,7 @@ sendMessage Client{..} message = hPutStrLn clientHandle $
         case message of
             ServerMessage msg           -> "* " ++ msg
             InitiateGame -> "#"
+            QuitClient -> "Q"
             OpponentsNumber number  -> show number
 
 sendOpponent :: Client -> Message -> IO ()

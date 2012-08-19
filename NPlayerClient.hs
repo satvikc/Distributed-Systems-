@@ -26,7 +26,7 @@ client = do
                            then hPutStrLn hndl "n"
                            else hPutStrLn hndl "y"
                          listener
-                     "q" -> hFlush hndl >> hClose hndl >> print "handle closed"
+                     "Q" -> hFlush hndl >> hClose hndl >> print "handle closed"
                      _ -> putStrLn msg >> listener
   listener
 
