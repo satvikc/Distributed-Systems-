@@ -44,36 +44,42 @@ cabal-version:       >=1.8
 
 executable CalculatorServer
   main-is: CalculatorServer.hs
+  hs-source-dirs:q2
   other-modules: Calculator
   ghc-options: -threaded 
   build-depends:       base ==4.5.*, stm ==2.4.*, containers ==0.4.*, network ==2.3.*, parsec ==3.1.*, pretty ==1.1.*, random ==1.0.*, bytestring ==0.9.*, HUnit ==1.2.*, QuickCheck ==2.5.*, random-fu ==0.2.*, random-source ==0.3.*, mtl ==2.1.*
 
 executable CalculatorClient
   main-is: CalculatorClient.hs
+  hs-source-dirs:q2
   other-modules: 
   ghc-options: -threaded 
   build-depends:       base ==4.5.*, stm ==2.4.*, containers ==0.4.*, network ==2.3.*, parsec ==3.1.*, pretty ==1.1.*, random ==1.0.*, bytestring ==0.9.*, HUnit ==1.2.*, QuickCheck ==2.5.*, random-fu ==0.2.*, random-source ==0.3.*, mtl ==2.1.*
 
 executable ChatServer
   main-is: ChatServer.hs
+  hs-source-dirs:q3
   other-modules: 
   ghc-options: -threaded 
   build-depends:       base ==4.5.*, stm ==2.4.*, containers ==0.4.*, network ==2.3.*, parsec ==3.1.*, pretty ==1.1.*, random ==1.0.*, bytestring ==0.9.*, HUnit ==1.2.*, QuickCheck ==2.5.*, random-fu ==0.2.*, random-source ==0.3.*, mtl ==2.1.*
 
 executable ChatClient
   main-is: ChatClient.hs
+  hs-source-dirs:q3
   other-modules: 
   ghc-options: -threaded 
   build-depends:       base ==4.5.*, stm ==2.4.*, containers ==0.4.*, network ==2.3.*, parsec ==3.1.*, pretty ==1.1.*, random ==1.0.*, bytestring ==0.9.*, HUnit ==1.2.*, QuickCheck ==2.5.*, random-fu ==0.2.*, random-source ==0.3.*, mtl ==2.1.*
 
 executable NPlayerServer
   main-is: NPlayerServer.hs
+  hs-source-dirs:q1
   other-modules: 
   ghc-options: -threaded 
   build-depends:       base ==4.5.*, stm ==2.4.*, containers ==0.4.*, network ==2.3.*, parsec ==3.1.*, pretty ==1.1.*, random ==1.0.*, bytestring ==0.9.*, HUnit ==1.2.*, QuickCheck ==2.5.*, random-fu ==0.2.*, random-source ==0.3.*, mtl ==2.1.*
 
 executable NPlayerClient
   main-is: NPlayerClient.hs
+  hs-source-dirs:q1
   other-modules: 
   ghc-options: -threaded 
   build-depends:       base ==4.5.*, stm ==2.4.*, containers ==0.4.*, network ==2.3.*, parsec ==3.1.*, pretty ==1.1.*, random ==1.0.*, bytestring ==0.9.*, HUnit ==1.2.*, QuickCheck ==2.5.*, random-fu ==0.2.*, random-source ==0.3.*, mtl ==2.1.*

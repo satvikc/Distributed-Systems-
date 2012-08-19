@@ -11,7 +11,7 @@
 
 * NPlayer Game (for 20 players)
     * ./dist/build/NPlayerServer/NPlayerServer 20 
-    * ./clients.sh 20
+    * ./q1/clients.sh 20
 
 * Calculator (to quit client type quit) 
     * ./dist/build/CalculatorServer/CalculatorServer 
