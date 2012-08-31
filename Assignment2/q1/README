@@ -1,0 +1,5 @@
+To Run first cd to the directory containing all the files.
+
+$ rmiregistry &
+$ ./server.sh & 
+$ ./client.sh 
