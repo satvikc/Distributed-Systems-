@@ -10,6 +10,7 @@
 int 
 simp_prog_1(char *host,int number)
 {
+    struct timeval tv;
 	CLIENT *clnt;
 	int  *result_1;
 	operands  next_prime_1_arg;
@@ -22,6 +23,9 @@ simp_prog_1(char *host,int number)
 		exit (1);
 	}
 #endif	/* DEBUG */
+    tv.tv_sec = 60 ;
+    tv.tv_usec = 0;
+    clnt_control(clnt, CLSET_TIMEOUT,&tv);
 
 	result_1 = next_prime_1(&next_prime_1_arg, clnt);
 	if (result_1 == (int *) NULL) {
