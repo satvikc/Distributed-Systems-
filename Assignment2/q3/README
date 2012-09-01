@@ -1,0 +1,9 @@
+* Start rpcbind in root. 
+$ sudo rpcbind -wi &
+
+* Start the server 
+$ sudo ./simp_server 
+
+* Start client (If you want next prime of 100)
+$ ./simp_client locathost 100 
+
