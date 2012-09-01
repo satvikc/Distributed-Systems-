@@ -4,4 +4,5 @@ all : parallelmerge.hs
 clean : 
 	rm -f *.hi 
 	rm -f *.o 
-	rm parallelmerge 
+	rm -f parallelmerge 
+	rm -rf ./dist

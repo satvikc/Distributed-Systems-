@@ -1,0 +1,12 @@
+* Compiling and Building (GHC = 7.4)
+
+$ cabal configure 
+$ cabal build 
+
+* To run the parallel merge using 5 processes
+* It will sort a list of 100 numbers (from 1 to 100) which was given in reverse 
+* order 
+
+$ ./run.sh 5
+
+
