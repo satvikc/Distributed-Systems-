@@ -5,13 +5,14 @@ import           Control.Parallel.MPI.Simple
 
 
 main :: IO ()
-main = mpiWorld $ mpiMergeSort $ reverse [1..100]
+main = mpiWorld $ mpiMergeSort $ reverse [3,7,1,9,100,23,45,2,31,48,100]
 
 mpiMergeSort :: [Int] -> Int -> Rank -> IO ()
 mpiMergeSort xs size rank = do
     localdata <-  case rank of
       0 -> scatterSend commWorld 0  $ divideMessage size (replicate size []) xs
       _ -> scatterRecv commWorld 0
+    putStrLn $ "Data at " ++ show rank ++ " is " ++ show localdata
     let sortedData = mergeSort localdata
     --putStrLn $ show rank ++ ": " ++ show sortedData
     sorted <- sendPartner (fromRank rank) size (power2 $ size -1) sortedData
@@ -38,7 +39,7 @@ mpiMergeSort xs size rank = do
                return sdata
        else if (rank+sendMap < size)
                then do (msg,_status) <- recv commWorld (toRank $ rank+sendMap) unitTag
-                       --putStrLn $ "receiving at " ++ show rank ++ " from" ++ show (rank+sendMap) ++ " data " ++ show msg
+                       putStrLn $ "receiving at " ++ show rank ++ " from" ++ show (rank+sendMap) ++ " data " ++ show msg
                        sendPartner rank size rest $ merge sdata msg
                else sendPartner rank size rest sdata
 

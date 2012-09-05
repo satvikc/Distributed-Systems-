@@ -65,3 +65,4 @@ calcServer = runServer (\a -> return . C8.pack . eval $ C8.unpack a)
 
 main :: IO ()
 main = calcServer
+
