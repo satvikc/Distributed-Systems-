@@ -3,6 +3,12 @@
 $ cabal configure 
 $ cabal build 
 
+* If haskell-mpi fails to install then do 
+
+$ cabal unpack 
+$ cd to the directry 
+$ cabal install --extra-include-dirs=/path/to/mpi/headers --extra-lib-dirs=/usr/lib/openmpi
+
 * To run the parallel merge using 5 processes
 * It will sort a list of 100 numbers (from 1 to 100) which was given in reverse 
 * order 
