@@ -1,0 +1,3 @@
+@ SOA arpa. (some random soa record)
+in-addr NS inaddrns
+inaddrns A 0.0.0.1
