@@ -234,10 +234,21 @@ parseRecords = do
 main :: IO ()
 main = do
   (root:dom:_)  <- getArgs
-  case parse pSDomain "" dom of
-    Right dom -> case parse pIP "" root of
-      Right ip -> do
-        out <- resolve ip dom
-        return ()
-      Left _ -> putStrLn "Unable to parse ip"
-    Left _ -> putStrLn "unable to parse domain"
+  case parse pIP "" root of
+    Right ip -> case parse pIP "" dom of
+      Right i@(i1,i2,i3,i4) -> do
+        out <- resolveReverse ip [show i4,show i3,show i2,show i1,"in-addr","arpa"]
+        mapM_ (\a -> putStrLn $ showIP i ++ " " ++ show a) out
+      Left _ -> case parse pSDomain "" dom of
+        Right dom -> do
+          out <- resolve ip dom
+          mapM_ (prettyPrinter dom) out
+        Left _ -> putStrLn "Unable to parse domain"
+    Left _ -> putStrLn "unable to root ip"
+
+showIP :: IP -> String
+showIP (ip1,ip2,ip3,ip4) = (show ip1 ++ "." ++ show ip2 ++ "." ++ show ip3 ++ "." ++ show ip4)
+
+prettyPrinter :: SDomain -> Record -> IO ()
+prettyPrinter dom (A (FD dom2) ip) = putStrLn $ intercalate "." dom ++ " A " ++ showIP ip
+prettyPrinter dom r = putStrLn $ intercalate "." dom ++ show r
