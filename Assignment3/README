@@ -1,0 +1,22 @@
+* The format of the zone file is assumed to be very simple, otherwise it would
+have required to write a very complex parser. 
+* The format of zone file is, example 
+
+@ SOA <fqdn of zone> soa records in one line only 
+@ SOA com. com zone file (some records) 
+google A 8.8.8.8 
+www.google CNAME google.com.
+
+* No comments or blank lines are allowed. 
+
+* In the provided zone file examples 172.31.1.1 is the root zone file.
+
+* To search for say iitk.ac.in, do 
+
+runhaskell DNSResolver.hs 172.31.1.1 iitk.ac.in 
+
+* To reverse lookup for say 172.31.1.6, do
+
+runhaskell DNSResolver.hs 172.31.1.1 172.31.1.6
+
+* It will print trace of the steps executed. 

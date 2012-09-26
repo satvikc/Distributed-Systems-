@@ -81,6 +81,7 @@ resolve ip@(ip1,ip2,ip3,ip4) fd = do
                 [] -> putStrLn "No records Found" >> return []
                 ((A _ iNS):_) -> resolve iNS fd
           cnames -> do
+            putStrLn $ "Resolving CNAMES for " ++ show cnames
             w <- mapM (resolve root) cnames
             return $ concat w
         recs -> do
@@ -238,7 +239,7 @@ main = do
     Right ip -> case parse pIP "" dom of
       Right i@(i1,i2,i3,i4) -> do
         out <- resolveReverse ip [show i4,show i3,show i2,show i1,"in-addr","arpa"]
-        mapM_ (\a -> putStrLn $ showIP i ++ " " ++ show a) out
+        mapM_ (\a -> putStrLn $ showIP i ++ " PTR " ++ showPTR a) out
       Left _ -> case parse pSDomain "" dom of
         Right dom -> do
           out <- resolve ip dom
@@ -249,6 +250,11 @@ main = do
 showIP :: IP -> String
 showIP (ip1,ip2,ip3,ip4) = (show ip1 ++ "." ++ show ip2 ++ "." ++ show ip3 ++ "." ++ show ip4)
 
+showPTR :: Record -> String
+showPTR (PTR _ (FD dom)) = intercalate "." dom
+showPTR a = show a
+
 prettyPrinter :: SDomain -> Record -> IO ()
 prettyPrinter dom (A (FD dom2) ip) = putStrLn $ intercalate "." dom ++ " A " ++ showIP ip
+
 prettyPrinter dom r = putStrLn $ intercalate "." dom ++ show r
