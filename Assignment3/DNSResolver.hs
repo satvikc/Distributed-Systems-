@@ -2,6 +2,7 @@ import Control.Applicative ((<$>))
 import Text.ParserCombinators.Parsec
 import Data.Word
 import Data.List
+import System.Environment
 
 type FDomain = [String]
 type SDomain = [String]
@@ -13,12 +14,14 @@ data Record = A Domain IP | NS Domain Domain | CNAME Domain Domain | PTR Domain 
 -- | Filter records matching domain in A record type
 resolveA :: FDomain -> [Record] -> [Record]
 resolveA dom recs = do
-  let (SOA sdom _) = head recs
-  filter (f sdom dom) (tail recs)
+  let (SOA soadom _) = head recs
+  map (g soadom) $ filter (f soadom dom) (tail recs)
   where
     f soadom dom (A (FD fdom) _) = fdom == dom
     f soadom dom (A (SD sdom) _) = concat (sdom ++ soadom) == concat dom
     f _ _ _ = False
+    g soadom a@(A (FD fdom) _) = a
+    g soadom (A (SD sdom) ip) = A (FD (sdom ++ soadom)) ip
 
 -- | Filter records matching domain in PTR record type
 resolvePTR :: FDomain -> [Record] -> [Record]
@@ -226,3 +229,15 @@ parseRecords = do
   out <- try pA <|> try pNS <|> try pCNAME <|> pPTR
   rest <- option [] parseRecords
   return (out:rest)
+
+
+main :: IO ()
+main = do
+  (root:dom:_)  <- getArgs
+  case parse pSDomain "" dom of
+    Right dom -> case parse pIP "" root of
+      Right ip -> do
+        out <- resolve ip dom
+        return ()
+      Left _ -> putStrLn "Unable to parse ip"
+    Left _ -> putStrLn "unable to parse domain"
