@@ -82,7 +82,7 @@ resolve ip@(ip1,ip2,ip3,ip4) fd = do
                 ((A _ iNS):_) -> resolve iNS fd
           cnames -> do
             putStrLn $ "Resolving CNAMES for " ++ show cnames
-            w <- mapM (resolve root) cnames
+            w <- mapM (\cn -> if inSameZone cn (head cont) then resolve ip cn else resolve root cn) cnames
             return $ concat w
         recs -> do
           putStrLn $ show recs
