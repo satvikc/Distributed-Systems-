@@ -1,8 +1,10 @@
 -module(processes).
--export([start/2,quorum/2,process/0,executeCritical/0,lockSharedMemory/2,waitForResponse/3]).
+-export([start/1,startN/2,quorum/2,process/0,executeCritical/0,lockSharedMemory/2,waitForResponse/3]).
 -import(math,[sqrt/1]).
 
-start(0,List) ->
+start(N) ->
+    startN(N,[]).
+startN(0,List) ->
     N = length(List),
     IndexedList = lists:zip(lists:seq(1,N),List),
     lists:map(fun({I,Pid}) ->
@@ -10,9 +12,13 @@ start(0,List) ->
                       Pid ! Send
                       end, IndexedList),
     io:format("Started Processes are ~p ~n",[List]);
-start(N,List) ->
+startN(N,List) ->
     Pid = spawn(processes,process,[]),
-    start(N-1,[Pid|List]).
+    startN(N-1,[Pid|List]).
+
+%%%%%%%%%%%%%%%%%%%
+%%%% PROCESSES %%%%
+%%%%%%%%%%%%%%%%%%%
 
 %% Actual process which access the shared memory using maekawa algorithm.
 process() ->
@@ -36,7 +42,7 @@ lockSharedMemory(Quorum,State) ->
     waitForResponse(State,[],orddict:from_list(Responses)).
 
 waitForResponse(State,Queue,Responses) ->
-%%    io:format("~p > Current State ~p Queue ~p and Responses ~p ~n",[self(),State,Queue,Responses]),
+    %%    io:format("~p > Current State ~p Queue ~p and Responses ~p ~n",[self(),State,Queue,Responses]),
     receive
         {From,request,TS} ->
             io:format("~p > request from ~p timestamp is ~p ~n",[self(),From,TS]),
@@ -110,7 +116,9 @@ waitForResponse(State,Queue,Responses) ->
 
 
 
-
+%%%%%%%%%%%%%%%%%%%%
+%%%% QUORUM SET %%%%
+%%%%%%%%%%%%%%%%%%%%
 
 %% Finding the quorum set using the square method.
 %% If length of list is not a square then 3rd and 4th codition of quorum set will not be satisfied.
@@ -121,8 +129,9 @@ quorum(P,N) -> M = ceiling(sqrt(N)),
                Elements = Row ++ Column -- [P],
                lists:filter(fun(X) -> X =< N end,Elements).
 
-
-%% Critical section
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% CRITICAL SECTION %%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%
 executeCritical() ->
     random:seed(erlang:now()),
     MyGuess = random:uniform(100),
