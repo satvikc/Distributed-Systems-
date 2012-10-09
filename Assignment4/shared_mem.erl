@@ -2,7 +2,7 @@
 -export([start/0,loop/2]).
 
 %% Starts the shared memory process.
-start() -> register(shared_memory,spawn(shared_mem,loop,[none,none])).
+start() -> register(shared_memory,spawn(shared_mem,loop,[none,random:uniform(100)])).
 
 %% loop
 
@@ -11,7 +11,6 @@ loop(Holded,State) ->
          %% Opens the shared memory for reading.
          {From,open} ->
              if Holded == none ->
-              io:format("Shared Memory Open request from ~p ~n",[From]),
               loop(From,State);
                 true  -> io:format("Illegal shared memory access request from ~p. It is already holded by ~p ~n.",[From,Holded]),
                          loop(Holded,State)
@@ -19,7 +18,6 @@ loop(Holded,State) ->
          %% Writes the Value to the shared Memory. Only the process which opened the shared memory can write.
          {From,write,Value} ->
              if (Holded == From) and (Holded /= none) ->
-                     From ! State,
                      loop(Holded,Value);
                 true ->
                      io:format("Illegal write request from ~p while shared memory is opened by ~p ~n",[From,Holded]),
